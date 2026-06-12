@@ -20,6 +20,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # V6: regenerar ios/ si no está en el repo (placeholder, luego se sobreescribe con flutter create --platforms)
+      - name: Ensure ios/ exists (V6)
+        run: |
+          if [ ! -d "ios" ]; then
+            flutter create --org ai.quyriux --platforms=ios --project-name fenix_pocket_os .
+          fi
+
       - name: Pod Install
         run: |
           cd ios
@@ -32,7 +39,7 @@ jobs:
       - name: Create Payload and Zip
         run: |
           cd build/ios/iphoneos
-          mkdir Payload
+          mkdir -p Payload
           cp -R Runner.app Payload/
           zip -r app-release.ipa Payload
           cd ../../..
