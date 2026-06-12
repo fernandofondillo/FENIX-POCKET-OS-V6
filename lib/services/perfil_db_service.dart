@@ -32,4 +32,15 @@ class PerfilDbService {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  /// Recupera todo el perfil EAV como un mapa clave→valor.
+  /// Utilizado por ChatScreen para inyectar identidad en el PayloadRequest.
+  Future<Map<String, String>> getPerfilCompleto() async {
+    if (_db == null) await initDb();
+    final rows = await _db!.query('eav_data', columns: ['clave', 'valor']);
+    return {
+      for (final r in rows)
+        r['clave'] as String: r['valor'] as String
+    };
+  }
 }

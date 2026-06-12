@@ -166,7 +166,11 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _textController = TextEditingController();
+  final _textController = TextEditingController();
+  final _scrollController = ScrollController();
+  final _storage = const FlutterSecureStorage();
+  final _uuid = const Uuid();
+
   final List<String> _mensajesUI = [
     '[CORE_SYNC_OK] Soy tu encapsulado A.G.O.S local. Mis tensores no persisten nada de ti una vez apagada la RAM. ¿Sobre qué vector operamos?'
   ];
