@@ -538,11 +538,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: TextField(
                       controller: _textController,
                       style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Transmite instrucción a $_capsulaActiva...',
-                        hintStyle: TextStyle(color: Colors.white30, fontSize: 14),
+                        hintStyle: const TextStyle(color: Colors.white30, fontSize: 14),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16)
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16)
                       ),
                       onSubmitted: (_) => _enviarMensaje(),
                     ),
