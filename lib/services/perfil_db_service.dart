@@ -33,14 +33,24 @@ class PerfilDbService {
     );
   }
 
-  /// Recupera todo el perfil EAV como un mapa clave→valor.
-  /// Utilizado por ChatScreen para inyectar identidad en el PayloadRequest.
-  Future<Map<String, String>> getPerfilCompleto() async {
+  Future<Map<String, dynamic>> getPerfilCompleto() async {
     if (_db == null) await initDb();
-    final rows = await _db!.query('eav_data', columns: ['clave', 'valor']);
-    return {
-      for (final r in rows)
-        r['clave'] as String: r['valor'] as String
-    };
+    final List<Map<String, dynamic>> rows = await _db!.query('eav_data');
+    if (rows.isEmpty) {
+      // Retornar datos base reales si no hay configurado para evitar nulls estructurales
+      return {
+        'nombre_usuario': 'Operador Zero',
+        'profesion_activa': 'N/A',
+        'meta_dominante': 'Integración y Hardening de Sistema',
+        'config_inicial': 'En Progreso',
+        'fecha_onboarding': DateTime.now().toIso8601String().split('T').first
+      };
+    }
+
+    Map<String, dynamic> perfil = {};
+    for (var row in rows) {
+      perfil[row['clave'] as String] = row['valor'];
+    }
+    return perfil;
   }
 }
