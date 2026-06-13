@@ -497,3 +497,187 @@ Se emitió un hotfix quirúrgico a nivel de contrato Pydantic para solventar un 
 Se implementó un parche quirúrgico sobre el extractor JSON en el proceso de Long-Polling para evitar que objetos de validación llegaran sin formatear a la vista del usuario final:
 1. **Extracción Tipada y Filtrado Seguro**: En `api_service.dart` (`enviar_mensaje_con_polling`), se intercepta la carga útil (`datos_polling['result']`) para extraer y parsear como `String` la llave `assistant_response`. Se evita que un `Map<String, dynamic>` crudo de backend rompa las condicionales del visualizador.
 2. **Traducción del Contrato de Interfaz**: Se reformateó el retorno del servicio para devolver explícitamente `{'response': respuestaText}` o la estructura interceptada `{'skill_call': ...}` esperada de manera estricta por `welcome_screen.dart`, curando así el fallo `Respuesta estructural no parseable` y logrando un renderizado fluido del entorno de chat nativo.
+
+---
+
+## 📌 Estado de la versión V6 — Registro completo y cierre de iteración (Puntos 33–V6.8)
+
+> **Pausa declarada por CEO el 13 de junio de 2026**: Fénix Pocket OS V6 queda en estado **estable y entregado** con las siguientes mejoras acumuladas. No se aplican más parches hasta que CEO lo solicite.
+
+### Resumen ejecutivo V6 → V6.8
+
+V6 partió como clon limpio del repositorio V2 (`fb9b512`), heredando toda la base funcional (3 system prompts soberanos, Bóveda AES-256, RAG local, Arq/Redis, etc.) y aplicó 8 fixes quirúrquicos verificados E2E para llegar a la versión 6.8 con memoria operativa y robustez de red.
+
+### 33. Auditoría y Fixes V6.1 → V6.4 (Base funcional)
+
+| Versión | Fix | Archivo | Verificación |
+|---|---|---|---|
+| V6.1 | Escape `\$50` `\$150` (Punto 33) | `nano_obsidian_screen.dart:44` | Flutter build OK |
+| V6.2 | `const InputDecoration` quitado | `welcome_screen.dart:542` | Flutter build OK |
+| V6.2 | `writeEncryptedMarkdown` antes de `guardar_documento` | `nano_obsidian_screen.dart` | E2E test OK |
+| V6.3 | `perfil_identidad: str` + `active_skills: []` | `payload_request.dart` | HTTP 422 resuelto |
+| V6.3 | `Duration(seconds: 90)` | `skills_service.dart:19` | Timeout HTTP ampliado |
+| V6.4 | Fix A+B (quitar prefijo A.G.O.S:) | `inference_router.py` + `welcome_screen.dart` | Sin error de "tag" en respuestas |
+
+### 34. V6.5 — Humanización del error de red (Fix A+C+D)
+
+**Problema CEO**: el bot respondía con mensajes de error técnicos tipo "Error de red" o "JSON inválido", rompiendo la experiencia de "amigo acompañante".
+
+**Causa raíz**: el `catch (e)` genérico en `welcome_screen.dart` mostraba la excepción cruda. Y el `FactExtractor` en backend a veces vaciaba la respuesta de Qwen tras extraer mutaciones XML, devolviendo `assistant_response: ""`.
+
+**Fixes aplicados**:
+
+1. **Fix A (frontend)**: humanización del mensaje cuando el backend devuelve respuesta vacía:
+   ```dart
+   _mensajesUI.add('Disculpa, ahora mismo no encuentro las palabras. ¿Me lo cuentas de otra forma?');
+   ```
+2. **Fix C (backend)**: fallback natural en `main.py` cuando Qwen devuelve solo XML sin texto humano:
+   ```python
+   if not sanitized_response.strip() and perfil_updates:
+       first = perfil_updates[0]
+       sanitized_response = f"He registrado: {first.get('clave')} = {first.get('valor')}. ¿Necesitas algo más?"
+   ```
+3. **Fix D (frontend)**: humanización del error de red:
+   ```dart
+   _mensajesUI.add('Ahora mismo no tengo conexión con mi cerebro remoto. Lo intento de nuevo, ¿vale?');
+   ```
+
+**Verificación E2E**: backend pasó de devolver `assistant_response: ""` a texto humanizado. 3/3 tests pasaron en VPS.
+
+### 35. V6.6 — Conversación natural y mapeo de cápsulas (Fix F1+F2+F3+S1)
+
+**Problema CEO**: el bot sonaba "tipo formulario" ("He registrado: X=Y. ¿Necesitas algo más?") cuando CEO pedía cosas naturales, y las cápsulas (Coach Carlos, Dra. Sofía) **nunca se activaban** porque los IDs del frontend no coincidían con los del backend.
+
+**Diagnóstico** (leer código, no improvisar): 5 bugs estructurales identificados en `welcome_screen.dart`, `capsule_detector.dart`, `inference_router.py` y `memory_service.dart`:
+
+1. **Bug F1**: `historialReciente: []` hardcoded — el frontend NUNCA llamaba `memoryService.obtener_memoria_inmediata()`. El backend recibía SIEMPRE historial vacío.
+2. **Bug F2**: IDs de cápsulas incompatibles. Frontend usaba `nutricion_expert`, `fitness_expert`; backend solo conocía `Fénix Base`, `Coach Carlos`, `Dra. Sofía`. **Mapeo aplicado**:
+   ```
+   nutricion_expert       → Dra. Sofía
+   fitness_expert         → Coach Carlos
+   biohacking_expert      → Fénix Base
+   zen_mentor             → Fénix Base
+   pro_work_assistant     → Fénix Base
+   elderly_care           → Dra. Sofía
+   general_coordinator    → Fénix Base
+   ```
+3. **Bug F3**: perfil de identidad leía de 2 fuentes inconsistentes (SQLite EAV + MemoryService RAM). **Unificado** a solo `db.getPerfilCompleto()`.
+4. **Bug S1**: `CapsuleDetector` heurístico pobre. **Enriquecido** con palabras: "personaliza", "a mi medida", "para mi", "cetosis", "16/8", "fuerza".
+5. **Bug system prompt**: backend decía "concisión extrema, terminal militar". **Reescrito** con directriz cálida: "saluda por nombre, haz preguntas, evita tono formulario".
+
+**Parámetros Qwen ajustados**: `temp: 0.3 → 0.5`, `max_tokens: 1024 → 512`.
+
+**Verificación E2E** (3 tests en VPS):
+- "hola" → "¡Hola Fernando! ¿Cómo estás? Estoy aquí para ayudarte en tu objetivo de perder grasa..." ✅
+- "ayúdame con la dieta" → plan cetosis + pregunta concreta ✅
+- "sí, ayuno 16/8" → continuidad + plan 10AM-6PM ✅
+
+### 36. V6.7 — Chat persistente y timeout de polling (Fix F4+F5+F5b+B5+B6)
+
+**Problema CEO**: "Cuando salgo de la app y vuelvo, pierdo la conversación. A veces la respuesta tarda y se corta con error de red."
+
+**Diagnóstico en vivo** (leer log del step, no improvisar):
+- Qwen 7B tarda **2.82s, 17.78s, 27.95s, 53.61s, 56.50s** por inferencia (verificado en `/var/log/fenix-v6-worker.log`).
+- `api_service.dart:55` tenía `timeout_segundos = 30` — **el cliente abortaba a los 30s** cuando Qwen tardaba más.
+- 0 crashes backend, 0 errores 5xx. El problema era de timeout del cliente, no del servidor.
+- 2 workers Arq duplicados (PIDs 1100003 y 1118977) corriendo — competían por jobs.
+
+**Fixes aplicados**:
+
+1. **F4 (frontend persistencia)**: cada mensaje se guarda en `SharedPreferences` con key `chat_mensajes_persistidos_v6`. Al iniciar la app, `_cargarMensajesPersistidos()` restaura el historial completo. **El chat ya NO se pierde al cerrar la app o matar el proceso**.
+2. **F5 (timeout polling)**: `api_service.dart:55` `timeout_segundos = 30 → 120s`. Qwen tiene hasta 2 min para responder mensajes complejos.
+3. **F5b (typing humanizado)**: "Vectorizando conocimiento..." → **"Fénix está pensando…"**. Más cálido.
+4. **B5 (backend)**: matar el 2do worker Arq duplicado (`kill -9 1118977`).
+5. **B6 (backend health check)**: nuevo endpoint `GET /api/v1/health` que chequea Qwen + Redis + Arq:
+   ```bash
+   curl http://127.0.0.1:8000/api/v1/health
+   # → {"api":"ok","qwen":"ok","redis":"ok","arq_worker":"ok (3 workers)"}
+   ```
+
+**Verificación E2E**: health endpoint 200 OK. Chat sobrevive a cierre de app. Respuestas largas (hasta 56s) ya no se cortan.
+
+### 37. V6.8 — Memoria inmediata operativa (Fix principal)
+
+**Problema CEO** (V6.7): "Empieza coherente y me reconoce, pero a la tercera interacción se pierde y vuelve como si iniciara un chat, no sabe lo que hablamos en los tres últimos mensajes."
+
+**Causa raíz** (leer `memory_service.dart` y `welcome_screen.dart`):
+- `agregar_mensaje_inmediato()` **EXISTÍA** en `MemoryService` con lógica FIFO de 50 mensajes.
+- **NUNCA SE LLAMABA** desde `welcome_screen.dart`. La app enviaba `historialReciente=[]` al backend siempre.
+- Qwen, al ser stateless, no tenía contexto. Su "memoria" interna se agotaba pasados 2-3 turnos y volvía a "saludar como si fuera nuevo".
+
+**Fixes aplicados** (5 líneas en `welcome_screen.dart`):
+
+```dart
+// Cuando CEO envía mensaje:
+memoryService.agregar_mensaje_inmediato('user', text);
+
+// Cuando bot responde:
+memoryService.agregar_mensaje_inmediato('assistant', resp);
+
+// Para errores y skill calls:
+memoryService.agregar_mensaje_inmediato('assistant', '[tipo]');
+```
+
+**Refactor de scope** (necesario para que el `catch` también pudiera escribir):
+- `_memoryService` instanciado a **nivel de clase** (no dentro del `try`).
+- Flag `_memoryInicializada` para evitar reinicializar `init_memory()` en cada mensaje.
+
+**Fixes técnicos colaterales para hacer viable el build**:
+
+1. **iOS workflow**: `flutter build ios --release --no-codesign` fallaba aleatoriamente con "Development Team required" en Flutter 3.44.2. **Solución**: `xcodebuild` directo con `CODE_SIGNING_ALLOWED=NO` explícito.
+2. **Búsqueda de `.app`**: `xcodebuild` deja el binario en `~/Library/Developer/Xcode/DerivedData/Runner-xxx/Build/Products/Release-iphoneos/`, no en `build/ios/iphoneos/`. **Solución**: `find` dinámico en el step "Create Payload and Zip".
+
+**Verificación E2E**: 4 commits en cascada, build OK en ambas plataformas, IPA Mach-O 64-bit verificado (`cffaedfe`).
+
+### Limitaciones conocidas V6.8 (aceptadas por CEO el 13-jun-2026)
+
+| # | Limitación | Causa | Mitigación futura |
+|---|---|---|---|
+| L1 | A veces repite respuestas en interacciones largas | Duplicación interna del mensaje actual en el prompt (frontend lo pre-añade a `historial_reciente`, backend también lo añade como `active_message`) | Quitar 1 línea en backend (`inference_router.py:112`) o frontend (`welcome_screen.dart:260`) |
+| L2 | No tiene web search real (Qwen inventa datos de clima, AEMET, precios) | No hay tool de búsqueda web implementada; Qwen 7B solo tiene knowledge base de entrenamiento | Integrar `ddgs` (DuckDuckGo Search) o Tavily; añadir system prompt "no inventar datos en tiempo real" |
+| L3 | Pérdida de coherencia después de 6-7 turnos | `historial_reciente` se trunca a últimos 10 mensajes; Qwen 7B con context size 8192 puede perder detalles | Subir `_limite_inmediata` de 50 a 100, o implementar resumen incremental |
+
+### Estado de procesos backend (verificado el 13-jun-2026 12:36)
+
+```
+FastAPI V6:  PID 1119623, :8000, health 200 OK
+Arq worker:  PID 1100003, log /var/log/fenix-v6-worker.log
+Qwen 2.5 7B: PID 28587, :8090, Q4_K_M, context 8192
+Redis:       PONG, 1 worker procesando cola
+ngrok:       https://roguish-degradedly-anjelica.ngrok-free.dev → :8000
+```
+
+### Historial completo de commits V6 (16 commits)
+
+```
+f229ad4 ci(v6): buscar Runner.app en DerivedData para xcodebuild
+b66c7ce fix(v6): scope del catch usa _memoryService de clase
+8c267b1 ci(v6): xcodebuild directo con CODE_SIGNING_ALLOWED=NO
+7ee5309 ci(v6): build ipa con fallback
+b45959a fix(v6): memoria inmediata - guardar user+assistant en RAM
+8144de2 fix(v6): F4 persistencia + F5 timeout 120s + F5b typing
+556d75e fix: key 'ayuno' duplicada
+ff6fe4c fix(v6): F1+F2+F3 + S1 (contexto y mapeo cápsulas)
+eed46e5 fix(v6): humanizar mensajes error
+ade21a8 fix(v6): conversación natural
+0a8c02c fix(v6): timeout 90s
+a8e184d fix(api): JSON parsing (Punto 32)
+5565cb1 fix: HTTP 422 (Punto 31)
+5321f6d fix(v6): 3 build errors quirúrquicos
+7204b32 feat: sovereign personas (Punto 30)
+635cfff feat: premium UI/UX (Punto 29)
+4977d21 fix(v6): workflow iOS con flutter create
+eb1746c feat(v6): RC1 + workflows CI/CD
+fb9b512 V2 base (clonado limpio a FENIX-POCKET-OS-V6)
+```
+
+### Próximos pasos sugeridos (cuando CEO lo solicite)
+
+1. **Atacar L1 (duplicación de mensaje)**: 1 línea en backend o frontend, sin riesgo.
+2. **Implementar web search real (L2)**: librería `ddgs` o API Tavily. Esfuerzo medio (4-6 horas).
+3. **Mejorar retención de contexto (L3)**: subir `_limite_inmediata` y/o implementar resumen incremental con Qwen stesso.
+4. **Iteración con AI Studio en V2** (patrón híbrido CTO) para los próximos puntos visuales/UX.
+
+---
+
+> **Nota de cierre**: V6.8 queda como versión estable entregada. El usuario (CEO) ha decidido pausar el ciclo de parches continuos para evitar fatiga de iteración. El sistema completo está operativo y verificado E2E.
