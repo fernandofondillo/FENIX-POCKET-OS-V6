@@ -245,14 +245,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
       setState(() {
         if (resultado.containsKey('response')) {
-           _mensajesUI.add('A.G.O.S: ${resultado['response']}');
+          final resp = resultado['response'].toString().trim();
+          if (resp.isEmpty) {
+            _mensajesUI.add('A.G.O.S: [El orquestador devolvió respuesta vacía, reintenta.]');
+          } else {
+            _mensajesUI.add(resp);
+          }
         } else if (resultado.containsKey('skill_call')) {
-           final skillData = resultado['skill_call'];
-           _mensajesUI.add('A.G.O.S (Accionando Skill): Invocando ${skillData['name']} localmente...');
-           // Intercepción Ejecutiva local (De-Mocking)
-           _ejecutarSkillReal(skillData['name'], skillData['arguments'], userId);
+          final skillData = resultado['skill_call'];
+          _mensajesUI.add('A.G.O.S (Accionando Skill): Invocando ${skillData['name']} localmente...');
+          // Intercepción Ejecutiva local (De-Mocking)
+          _ejecutarSkillReal(skillData['name'], skillData['arguments'], userId);
         } else {
-           _mensajesUI.add('A.G.O.S: Respuesta estructural no parseable. $resultado');
+          _mensajesUI.add('A.G.O.S: Respuesta estructural no parseable. $resultado');
         }
       });
     } catch (e) {
