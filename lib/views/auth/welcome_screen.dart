@@ -247,7 +247,8 @@ class _ChatScreenState extends State<ChatScreen> {
         if (resultado.containsKey('response')) {
           final resp = resultado['response'].toString().trim();
           if (resp.isEmpty) {
-            _mensajesUI.add('A.G.O.S: [El orquestador devolvió respuesta vacía, reintenta.]');
+            // FIX A: mensaje humanizado cuando el backend devuelve respuesta vacía
+            _mensajesUI.add('Disculpa, ahora mismo no encuentro las palabras. ¿Me lo cuentas de otra forma?');
           } else {
             _mensajesUI.add(resp);
           }
@@ -257,12 +258,14 @@ class _ChatScreenState extends State<ChatScreen> {
           // Intercepción Ejecutiva local (De-Mocking)
           _ejecutarSkillReal(skillData['name'], skillData['arguments'], userId);
         } else {
-          _mensajesUI.add('A.G.O.S: Respuesta estructural no parseable. $resultado');
+          // FIX A: humanizado también
+          _mensajesUI.add('No he podido interpretar lo que llegó del orquestador. Inténtalo de nuevo en un momento.');
         }
       });
     } catch (e) {
       setState(() {
-        _mensajesUI.add('[ERROR_LINK] El Agente A.G.O.S no pudo establecer el enlace a la red temporalmente ($e)');
+        // FIX D: humanizado el error de red
+        _mensajesUI.add('Ahora mismo no tengo conexión con mi cerebro remoto. Lo intento de nuevo, ¿vale?');
       });
     } finally {
       if (mounted) setState(() => _isProcessing = false);
