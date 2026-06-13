@@ -173,6 +173,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   final _storage = const FlutterSecureStorage();
   final _uuid = const Uuid();
+  final MemoryService _memoryService = MemoryService();  // FIX MEMORIA: instanciado a nivel de clase para scope del catch
+  bool _memoryInicializada = false;
   static const String _kMensajesKey = 'chat_mensajes_persistidos_v6';
 
   // FIX F4: mensajes cargados desde SharedPreferences (no se pierden al cerrar app)
@@ -249,8 +251,11 @@ class _ChatScreenState extends State<ChatScreen> {
       
       _capsulaActiva = CapsuleDetector.detectar_capsula(text, capsula_anterior: _capsulaActiva);
       
-      final memoryService = MemoryService();
-      await memoryService.init_memory();
+      final memoryService = _memoryService;  // FIX MEMORIA: usar la instancia de clase
+      if (!_memoryInicializada) {
+        await memoryService.init_memory();
+        _memoryInicializada = true;
+      }
       // FIX MEMORIA: guardar mensaje del usuario en RAM (límite 50) para que historial_reciente llegue al backend
       memoryService.agregar_mensaje_inmediato('user', text);
       // F3: usamos la MISMA fuente (db.getPerfilCompleto) para historialUsuario
@@ -330,7 +335,7 @@ class _ChatScreenState extends State<ChatScreen> {
         // FIX D: humanizado el error de red
         _mensajesUI.add('Ahora mismo no tengo conexión con mi cerebro remoto. Lo intento de nuevo, ¿vale?');
       });
-      memoryService.agregar_mensaje_inmediato('assistant', '[error: conexión perdida]');
+      _memoryService.agregar_mensaje_inmediato('assistant', '[error: conexión perdida]');
       _persistirMensajes();  // FIX F4
     } finally {
       if (mounted) setState(() => _isProcessing = false);
