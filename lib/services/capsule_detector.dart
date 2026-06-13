@@ -8,8 +8,8 @@ final Logger _logger = Logger();
 /// el Payload REST hacia FastAPI.
 class CapsuleDetector {
   static const Map<String, Map<String, int>> _diccionario_ponderado = {
-    'fitness_expert': {'entrenamiento': 2, 'gimnasio': 2, 'pesas': 2, 'cardio': 1, 'músculo': 2, 'músculos': 2, 'lesión': 1, 'rutina': 2, 'ejercicio': 1, 'hipertrofia': 3},
-    'nutricion_expert': {'dieta': 2, 'calorías': 2, 'proteínas': 2, 'comida': 1, 'ayuno': 1, 'suplementos': 2, 'peso': 1, 'keto': 3, 'nutrición': 2, 'macros': 3},
+    'fitness_expert': {'entrenamiento': 2, 'gimnasio': 2, 'pesas': 2, 'cardio': 1, 'músculo': 2, 'músculos': 2, 'lesión': 1, 'rutina': 2, 'ejercicio': 1, 'hipertrofia': 3, 'fuerza': 2, 'entrenar': 2, 'pesa': 2, 'culturismo': 3},
+    'nutricion_expert': {'dieta': 2, 'calorías': 2, 'proteínas': 2, 'comida': 1, 'ayuno': 1, 'suplementos': 2, 'peso': 1, 'keto': 3, 'nutrición': 2, 'macros': 3, 'cetosis': 3, 'receta': 1, 'alimento': 1, 'alimenticio': 1, 'alimentación': 1, 'ceto': 3, 'ayunar': 1, '16/8': 3, 'comidas': 1, 'ayuno': 2},
     'zen_mentor': {'ansiedad': 3, 'estrés': 3, 'meditación': 2, 'paz': 1, 'relax': 1, 'respiración': 2, 'emociones': 2, 'estoicismo': 3, 'calma': 1, 'depresión': 3},
     'elderly_care': {'abuelos': 2, 'tensión': 2, 'pastillas': 2, 'memoria': 1, 'articulaciones': 2, 'médico': 2, 'cuidador': 3, 'salud mayor': 3, 'alzheimer': 3},
     'biohacking_expert': {'nootrópicos': 3, 'vo2': 3, 'longevidad': 2, 'sueño': 2, 'rem': 2, 'dopamina': 2, 'testosterona': 2, 'ritmo circadiano': 3, 'ayuno': 2, 'hielo': 2},

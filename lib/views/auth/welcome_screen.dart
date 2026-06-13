@@ -191,6 +191,20 @@ class _ChatScreenState extends State<ChatScreen> {
       _isProcessing = true;
     });
 
+    // F2: mapa heurístico de IDs del frontend (CapsuleDetector) → IDs canónicos del backend
+    String _mapCapsulaToBackendId(String frontendId) {
+      const map = {
+        'fitness_expert': 'Coach Carlos',
+        'nutricion_expert': 'Dra. Sofía',
+        'biohacking_expert': 'Dra. Sofía',
+        'zen_mentor': 'Fénix Base',
+        'pro_work_assistant': 'Fénix Base',
+        'elderly_care': 'Dra. Sofía',
+        'general_coordinator': 'Fénix Base',
+      };
+      return map[frontendId] ?? 'Fénix Base';
+    }
+
     try {
       final String userId = await _storage.read(key: 'user_id') ?? const Uuid().v4();
       
@@ -202,8 +216,8 @@ class _ChatScreenState extends State<ChatScreen> {
       
       final memoryService = MemoryService();
       await memoryService.init_memory();
-      final identityData = await memoryService.obtener_identidad_estructurada();
-      final historialUsuarioStr = identityData.entries.map((e) => '${e.key}: ${e.value}').join(', ');
+      // F3: usamos la MISMA fuente (db.getPerfilCompleto) para historialUsuario
+      final historialUsuarioStr = identidad.entries.map((e) => '${e.key}: ${e.value}').join(', ');
 
       final localEmbedding = LocalEmbeddingService();
       await localEmbedding.init_model();
@@ -219,6 +233,12 @@ class _ChatScreenState extends State<ChatScreen> {
         } catch (_) {}
       }
 
+      // F2: mapear ID de cápsula del frontend (heurístico) al ID canónico del backend
+      final capsulaCanonicalId = _mapCapsulaToBackendId(_capsulaActiva);
+
+      // F1: enviar historial real de los últimos 10 mensajes
+      final historialReciente = memoryService.obtener_memoria_inmediata();
+
       // Creamos un payload estrictamente tipado y empaquetado en snake_case al enviar al backend
       final payload = PayloadRequest(
         userId: userId,
@@ -229,11 +249,11 @@ class _ChatScreenState extends State<ChatScreen> {
           conocimientoExperto: expertoContext.isEmpty ? '' : expertoContext
         ),
         capsulaActiva: CapsulaActivaPayload(
-          id: _capsulaActiva,
-          systemPrompt: 'Eres A.G.O.S, asistente seguro operando como $_capsulaActiva.',
+          id: capsulaCanonicalId,
+          systemPrompt: '',  // el backend ya tiene el system prompt por ID
           allowedSkills: ['agenda_crear', 'web_search']
         ),
-        historialReciente: []
+        historialReciente: historialReciente
       );
 
       final apiService = ApiService();
