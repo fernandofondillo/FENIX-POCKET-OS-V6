@@ -34,7 +34,19 @@ jobs:
           cd ..
 
       - name: Build iOS (No Codesign)
-        run: flutter build ipa --release --no-codesign 2>&1 || (echo "=== build ipa falló, fallback a build ios --no-codesign ===" && flutter build ios --release --no-codesign)
+        run: |
+          # Compilar directamente con xcodebuild para tener control total del signing
+          cd ios
+          xcodebuild -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tail -30
+          cd ..
 
       - name: Create Payload and Zip
         run: |
