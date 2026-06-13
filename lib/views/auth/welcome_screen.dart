@@ -239,7 +239,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final apiService = ApiService();
       // Delegación Real hacia el ORQUESTADOR ASGI FastAPI
       final resultado = await apiService.enviar_mensaje_con_polling(payload).timeout(
-        const Duration(seconds: 30),
+        const Duration(seconds: 90),
         onTimeout: () => throw TimeoutException("El clúster no respondió a tiempo.")
       );
 

@@ -16,7 +16,7 @@ class SkillsService {
       : _dio = Dio(BaseOptions(
           baseUrl: AppConfig.apiBaseUrl, 
           connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 30)
+          receiveTimeout: const Duration(seconds: 90)
         )) {
     // Intercepción visual de Consola Opcional. No rompe abstracción.
     // _dio.interceptors.add(LogInterceptor(responseBody: true));
