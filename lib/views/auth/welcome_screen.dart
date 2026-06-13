@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../services/perfil_db_service.dart';
@@ -172,14 +173,47 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   final _storage = const FlutterSecureStorage();
   final _uuid = const Uuid();
+  static const String _kMensajesKey = 'chat_mensajes_persistidos_v6';
 
-  final List<String> _mensajesUI = [
+  // FIX F4: mensajes cargados desde SharedPreferences (no se pierden al cerrar app)
+  List<String> _mensajesUI = [
     '[CORE_SYNC_OK] Soy tu encapsulado A.G.O.S local. Mis tensores no persisten nada de ti una vez apagada la RAM. ¿Sobre qué vector operamos?'
   ];
   bool _isProcessing = false;
   String _capsulaActiva = 'Fénix Base'; // Actualizamos Default a un nombre premium
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // FIX F4: cargar historial al iniciar
+  @override
+  void initState() {
+    super.initState();
+    _cargarMensajesPersistidos();
+  }
+
+  Future<void> _cargarMensajesPersistidos() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getStringList(_kMensajesKey);
+      if (raw != null && raw.isNotEmpty) {
+        setState(() {
+          _mensajesUI = raw;
+        });
+      }
+    } catch (e) {
+      // Si falla la carga, mantenemos el mensaje de bienvenida por defecto
+    }
+  }
+
+  // FIX F4: persistir cada vez que se añade un mensaje
+  Future<void> _persistirMensajes() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_kMensajesKey, _mensajesUI);
+    } catch (e) {
+      // Fallo silencioso de persistencia
+    }
+  }
 
   void _enviarMensaje() async {
     final text = _textController.text.trim();
@@ -190,6 +224,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _textController.clear();
       _isProcessing = true;
     });
+    _persistirMensajes();  // FIX F4
 
     // F2: mapa heurístico de IDs del frontend (CapsuleDetector) → IDs canónicos del backend
     String _mapCapsulaToBackendId(String frontendId) {
@@ -282,11 +317,13 @@ class _ChatScreenState extends State<ChatScreen> {
           _mensajesUI.add('No he podido interpretar lo que llegó del orquestador. Inténtalo de nuevo en un momento.');
         }
       });
+      _persistirMensajes();  // FIX F4
     } catch (e) {
       setState(() {
         // FIX D: humanizado el error de red
         _mensajesUI.add('Ahora mismo no tengo conexión con mi cerebro remoto. Lo intento de nuevo, ¿vale?');
       });
+      _persistirMensajes();  // FIX F4
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
@@ -299,10 +336,12 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
          _mensajesUI.add('A.G.O.S (Resultado Skill): ${result.toString()}');
       });
+      _persistirMensajes();  // FIX F4
     } catch (e) {
       setState(() {
          _mensajesUI.add('[ERROR_LINK] Ejecución de Skill fallida: $e');
       });
+      _persistirMensajes();  // FIX F4
     }
   }
 
@@ -544,7 +583,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(color: Color(0xFFD4AF37), strokeWidth: 2)),
                   const SizedBox(width: 8),
-                  const Text('Vectorizando conocimiento...', style: TextStyle(color: Color(0xFFD4AF37), fontFamily: 'Inter', fontSize: 12, fontStyle: FontStyle.italic)),
+                  const Text('Fénix está pensando…', style: TextStyle(color: Color(0xFFD4AF37), fontFamily: 'Inter', fontSize: 12, fontStyle: FontStyle.italic)),
                 ],
               ),
             ),

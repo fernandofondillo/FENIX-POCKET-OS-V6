@@ -47,12 +47,12 @@ class ApiService {
   }
 
   /// Ejecuta un ciclo continuo de consultas de alta frecuencia cada 800ms limitando las requests
-  /// con un máximo de tiempo de espera (Timeout de 30 segundos)
+  /// con un máximo de tiempo de espera (Timeout de 120 segundos)
   /// para impedir la congelación de la promesa principal y recuperar el output del Worker procesado.
   Future<Map<String, dynamic>> _iniciar_bucle_de_polling_automata(String taskId) async {
     final String url_polling = '$_base_url/api/v1/task/$taskId';
     final int intervalo_polling_ms = 800; // 800 milisegundos de frecuencia de interrogación
-    final int timeout_segundos = 30;     // Evita la congestión con bucles infinitos en el Frontend
+    final int timeout_segundos = 120;     // FIX F5: 30s→120s (Qwen 7B tarda hasta 56s en mensajes complejos)
     
     DateTime tiempo_inicio = DateTime.now();
 
