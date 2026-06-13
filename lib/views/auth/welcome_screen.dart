@@ -251,6 +251,8 @@ class _ChatScreenState extends State<ChatScreen> {
       
       final memoryService = MemoryService();
       await memoryService.init_memory();
+      // FIX MEMORIA: guardar mensaje del usuario en RAM (límite 50) para que historial_reciente llegue al backend
+      memoryService.agregar_mensaje_inmediato('user', text);
       // F3: usamos la MISMA fuente (db.getPerfilCompleto) para historialUsuario
       final historialUsuarioStr = identidad.entries.map((e) => '${e.key}: ${e.value}').join(', ');
 
@@ -304,17 +306,22 @@ class _ChatScreenState extends State<ChatScreen> {
           if (resp.isEmpty) {
             // FIX A: mensaje humanizado cuando el backend devuelve respuesta vacía
             _mensajesUI.add('Disculpa, ahora mismo no encuentro las palabras. ¿Me lo cuentas de otra forma?');
+            memoryService.agregar_mensaje_inmediato('assistant', '[respuesta vacía]');
           } else {
             _mensajesUI.add(resp);
+            // FIX MEMORIA: guardar respuesta del bot en RAM para mantener contexto
+            memoryService.agregar_mensaje_inmediato('assistant', resp);
           }
         } else if (resultado.containsKey('skill_call')) {
           final skillData = resultado['skill_call'];
           _mensajesUI.add('A.G.O.S (Accionando Skill): Invocando ${skillData['name']} localmente...');
+          memoryService.agregar_mensaje_inmediato('assistant', '[skill_call: ${skillData['name']}]');
           // Intercepción Ejecutiva local (De-Mocking)
           _ejecutarSkillReal(skillData['name'], skillData['arguments'], userId);
         } else {
           // FIX A: humanizado también
           _mensajesUI.add('No he podido interpretar lo que llegó del orquestador. Inténtalo de nuevo en un momento.');
+          memoryService.agregar_mensaje_inmediato('assistant', '[error: respuesta no interpretada]');
         }
       });
       _persistirMensajes();  // FIX F4
@@ -323,6 +330,7 @@ class _ChatScreenState extends State<ChatScreen> {
         // FIX D: humanizado el error de red
         _mensajesUI.add('Ahora mismo no tengo conexión con mi cerebro remoto. Lo intento de nuevo, ¿vale?');
       });
+      memoryService.agregar_mensaje_inmediato('assistant', '[error: conexión perdida]');
       _persistirMensajes();  // FIX F4
     } finally {
       if (mounted) setState(() => _isProcessing = false);
